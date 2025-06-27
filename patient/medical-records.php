@@ -30,14 +30,13 @@ try {
     exit();
 }
 
-// Fetch patient's medical records
+// Fetch patient's medical records from medical_history
 $medicalRecords = [];
 try {
-    $stmt = $pdo->prepare("SELECT * FROM medical_records WHERE patient_id = ? ORDER BY record_date DESC");
+    $stmt = $pdo->prepare("SELECT mh.*, d.id as doctor_id, u.first_name as doctor_first_name, u.last_name as doctor_last_name FROM medical_history mh JOIN doctors d ON mh.doctor_id = d.id JOIN users u ON d.user_id = u.id WHERE mh.patient_id = ? ORDER BY mh.visit_date DESC");
     $stmt->execute([$patientId]);
     $medicalRecords = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    // Handle database error
     echo "Database Error: " . $e->getMessage();
 }
 
@@ -123,22 +122,19 @@ if (!empty($prescriptions)) {
                                     <table class="table table-striped">
                                         <thead>
                                             <tr>
-                                                <th>Record Date</th>
-                                                <th>Type</th>
-                                                <th>Description</th>
-                                                <th>Actions</th>
+                                                <th>Date</th>
+                                                <th>Doctor</th>
+                                                <th>Diagnosis</th>
+                                                <th>Treatment</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php foreach ($medicalRecords as $record): ?>
                                                 <tr>
-                                                    <td><?php echo htmlspecialchars($record['record_date']); ?></td>
-                                                    <td><?php echo htmlspecialchars($record['record_type']); ?></td>
-                                                    <td><?php echo htmlspecialchars($record['description']); ?></td>
-                                                    <td>
-                                                        <!-- Add action buttons here (e.g., View Details) -->
-                                                        <a href="view_medical_record.php?id=<?php echo $record['id']; ?>" class="btn btn-sm btn-primary">View</a>
-                                                    </td>
+                                                    <td><?php echo htmlspecialchars($record['visit_date']); ?></td>
+                                                    <td>Dr. <?php echo htmlspecialchars($record['doctor_first_name'] . ' ' . $record['doctor_last_name']); ?></td>
+                                                    <td><?php echo htmlspecialchars($record['diagnosis']); ?></td>
+                                                    <td><?php echo htmlspecialchars($record['treatment'] ?? $record['treatment_notes'] ?? ''); ?></td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>

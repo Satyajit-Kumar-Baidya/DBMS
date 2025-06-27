@@ -133,6 +133,35 @@ try {
         FOREIGN KEY (patient_id) REFERENCES patients(id)
     )");
 
+    // Create doctor_availability table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS doctor_availability (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        doctor_id INT NOT NULL,
+        day_of_week ENUM('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') NOT NULL,
+        start_time TIME NOT NULL,
+        end_time TIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+    )");
+
+    // Create health_logs table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS health_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        patient_id INT NOT NULL,
+        log_date DATETIME NOT NULL,
+        weight_kg FLOAT,
+        blood_pressure_systolic INT,
+        blood_pressure_diastolic INT,
+        glucose_mgdl FLOAT,
+        temperature_c FLOAT,
+        heart_rate INT,
+        mood VARCHAR(50),
+        symptoms TEXT,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (patient_id) REFERENCES patients(id)
+    )");
+
 } catch(PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }

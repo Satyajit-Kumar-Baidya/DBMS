@@ -30,19 +30,19 @@ try {
     // Handle adding a new medical record
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_medical_record'])) {
         $patientId = $_POST['patient_id'] ?? '';
-        $consultationDate = $_POST['consultation_date'] ?? '';
+        $visitDate = $_POST['consultation_date'] ?? '';
         $diagnosis = $_POST['diagnosis'] ?? '';
         $treatmentNotes = $_POST['treatment_notes'] ?? '';
 
         // Basic validation
         if (empty($patientId)) $errors[] = 'Patient is required.';
-        if (empty($consultationDate)) $errors[] = 'Consultation date is required.';
+        if (empty($visitDate)) $errors[] = 'Consultation date is required.';
         if (empty($diagnosis)) $errors[] = 'Diagnosis is required.';
 
         if (empty($errors)) {
             try {
-                $stmt = $pdo->prepare("INSERT INTO medical_history (patient_id, doctor_id, consultation_date, diagnosis, treatment_notes) VALUES (?, ?, ?, ?, ?)");
-                $stmt->execute([$patientId, $doctorId, $consultationDate, $diagnosis, $treatmentNotes]);
+                $stmt = $pdo->prepare("INSERT INTO medical_history (patient_id, doctor_id, visit_date, diagnosis, treatment_notes) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$patientId, $doctorId, $visitDate, $diagnosis, $treatmentNotes]);
 
                 $success = 'Medical record added successfully!';
                 // Clear form fields after successful submission (optional)
@@ -54,12 +54,26 @@ try {
         }
     }
 
-     // Fetch medical records associated with this doctor (placeholder)
+    // Add patient search by ID for adding a new record
+    $searchedPatient = null;
+    if (isset($_POST['search_patient_id'])) {
+        $searchId = trim($_POST['search_patient_id']);
+        if ($searchId !== '') {
+            $stmt = $pdo->prepare("SELECT p.id, u.first_name, u.last_name FROM patients p JOIN users u ON p.user_id = u.id WHERE p.id = ?");
+            $stmt->execute([$searchId]);
+            $searchedPatient = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$searchedPatient) {
+                $errors[] = 'No patient found with that ID.';
+            }
+        }
+    }
+
+    // Fetch medical records associated with this doctor (placeholder)
     $stmt = $pdo->prepare("SELECT mh.*, u.first_name as patient_first_name, u.last_name as patient_last_name 
                           FROM medical_history mh 
                           JOIN patients p ON mh.patient_id = p.id 
                           JOIN users u ON p.user_id = u.id 
-                          WHERE mh.doctor_id = ? ORDER BY mh.consultation_date DESC");
+                          WHERE mh.doctor_id = ? ORDER BY mh.visit_date DESC");
     $stmt->execute([$doctorId]);
     $medicalRecords = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -92,6 +106,21 @@ try {
             ];
         }
         fclose($handle);
+    }
+
+    // Handle deleting a medical record
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_medical_record_id'])) {
+        $deleteId = intval($_POST['delete_medical_record_id']);
+        try {
+            $stmt = $pdo->prepare("DELETE FROM medical_history WHERE id = ? AND doctor_id = ?");
+            $stmt->execute([$deleteId, $doctorId]);
+            $success = 'Medical record deleted successfully!';
+            // Redirect to avoid resubmission
+            header('Location: medical-records.php');
+            exit();
+        } catch (PDOException $e) {
+            $errors[] = "Database Error: " . $e->getMessage();
+        }
     }
 
 } catch (PDOException $e) {
@@ -157,18 +186,24 @@ try {
                             <h5 class="mb-0">Add New Medical Record</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="medical-records.php">
+                            <form method="POST" action="medical-records.php?action=add">
+                                <div class="mb-3 row align-items-end">
+                                    <div class="col-md-6">
+                                        <label for="search_patient_id" class="form-label">Enter Patient ID</label>
+                                        <input type="number" class="form-control" id="search_patient_id" name="search_patient_id" value="<?php echo htmlspecialchars($_POST['search_patient_id'] ?? ''); ?>" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="submit" class="btn btn-info" name="search_patient">Search</button>
+                                    </div>
+                                </div>
+                            </form>
+                            <?php if ($searchedPatient): ?>
+                            <form method="POST" action="medical-records.php?action=add">
                                 <input type="hidden" name="add_medical_record" value="1">
+                                <input type="hidden" name="patient_id" value="<?php echo $searchedPatient['id']; ?>">
                                 <div class="mb-3">
-                                    <label for="patient_id" class="form-label">Select Patient</label>
-                                    <select class="form-select" id="patient_id" name="patient_id" required>
-                                        <option value="">-- Select a Patient --</option>
-                                         <?php foreach ($patients as $patient): ?>
-                                            <option value="<?php echo htmlspecialchars($patient['patient_id']); ?>">
-                                                <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <label class="form-label">Patient Name</label>
+                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($searchedPatient['first_name'] . ' ' . $searchedPatient['last_name']); ?>" readonly>
                                 </div>
                                 <div class="mb-3">
                                     <label for="consultation_date" class="form-label">Consultation Date</label>
@@ -184,6 +219,7 @@ try {
                                 </div>
                                 <button type="submit" class="btn btn-primary mt-3">Submit Medical Record</button>
                             </form>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -215,11 +251,15 @@ try {
                                         <?php $loop_index = 0; foreach ($medicalRecords as $record): ?>
                                             <tr>
                                                 <td><?php echo htmlspecialchars($record['patient_first_name'] . ' ' . $record['patient_last_name']); ?></td>
-                                                <td><?php echo htmlspecialchars($record['consultation_date']); ?></td>
+                                                <td><?php echo htmlspecialchars($record['visit_date']); ?></td>
                                                 <td><?php echo htmlspecialchars($record['diagnosis']); ?></td>
                                                 <td><?php echo nl2br(htmlspecialchars($record['treatment_notes'] ?? 'N/A')); ?></td>
                                                 <td>
                                                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#viewMedicalRecordModal<?php echo $loop_index; ?>">View Details</button>
+                                                    <form method="POST" action="" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this medical record?');">
+                                                        <input type="hidden" name="delete_medical_record_id" value="<?php echo $record['id']; ?>">
+                                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                                    </form>
                                                 </td>
                                             </tr>
                                             <!-- Modal for viewing medical record details and prescriptions -->
@@ -228,11 +268,10 @@ try {
                                                 <div class="modal-content">
                                                   <div class="modal-header">
                                                     <h5 class="modal-title" id="viewMedicalRecordModalLabel<?php echo $loop_index; ?>">Medical Record Details</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                   </div>
                                                   <div class="modal-body">
                                                     <p><strong>Patient:</strong> <?php echo htmlspecialchars($record['patient_first_name'] . ' ' . $record['patient_last_name']); ?></p>
-                                                    <p><strong>Date:</strong> <?php echo htmlspecialchars($record['consultation_date']); ?></p>
+                                                    <p><strong>Date:</strong> <?php echo htmlspecialchars($record['visit_date']); ?></p>
                                                     <p><strong>Diagnosis:</strong> <?php echo htmlspecialchars($record['diagnosis']); ?></p>
                                                     <p><strong>Treatment Notes:</strong> <?php echo nl2br(htmlspecialchars($record['treatment_notes'] ?? 'N/A')); ?></p>
                                                     <?php $prescriptions = $allPrescriptions[$record['patient_id']] ?? []; ?>
@@ -262,9 +301,6 @@ try {
                                                         </tbody>
                                                     </table>
                                                     <?php endif; ?>
-                                                  </div>
-                                                  <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                                   </div>
                                                 </div>
                                               </div>

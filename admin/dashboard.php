@@ -83,9 +83,6 @@ try {
                     <a href="dashboard.php" class="active">
                         <i class="fas fa-home"></i> Dashboard
                     </a>
-                    <a href="manage_users.php">
-                        <i class="fas fa-users"></i> Users
-                    </a>
                     <a href="manage_doctors.php">
                         <i class="fas fa-user-md"></i> Doctors
                     </a>

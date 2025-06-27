@@ -43,7 +43,7 @@ try {
             try {
                 // In a real application, you would integrate with a payment gateway here
                 // For this example, we'll simulate a successful payment
-                $stmt = $pdo->prepare("INSERT INTO payments (patient_id, bill_id, amount, payment_method, payment_status, due_date, payment_date) VALUES (?, ?, ?, ?, 'Completed', ?, NOW())");
+                $stmt = $pdo->prepare("INSERT INTO payments (patient_id, bill_id, amount, payment_method, status, due_date, payment_date) VALUES (?, ?, ?, ?, 'Completed', ?, NOW())");
                 $stmt->execute([$patientId, $billId, $amount, $paymentMethod, $dueDate]);
                 
                 $success = 'Payment processed successfully!';
@@ -185,8 +185,8 @@ try {
                                                 <td>$<?php echo number_format($payment['amount'], 2); ?></td>
                                                 <td><?php echo htmlspecialchars($payment['payment_method']); ?></td>
                                                 <td>
-                                                    <span class="badge bg-<?php echo $payment['payment_status'] === 'Completed' ? 'success' : ($payment['payment_status'] === 'Pending' ? 'warning' : 'danger'); ?>">
-                                                        <?php echo htmlspecialchars($payment['payment_status']); ?>
+                                                    <span class="badge bg-<?php echo $payment['status'] === 'Completed' ? 'success' : ($payment['status'] === 'Pending' ? 'warning' : 'danger'); ?>">
+                                                        <?php echo htmlspecialchars($payment['status']); ?>
                                                     </span>
                                                 </td>
                                                 <td><?php echo date('M d, Y', strtotime($payment['due_date'])); ?></td>

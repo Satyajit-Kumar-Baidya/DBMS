@@ -330,7 +330,7 @@ try {
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="#" class="btn btn-sm btn-primary">View Details</a>
+                                                    <!-- <a href="#" class="btn btn-sm btn-primary">View Details</a> -->
                                                     <form method="POST" action="" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this prescription?');">
                                                         <input type="hidden" name="delete_prescription_index" value="<?php echo $loop_index; ?>">
                                                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>

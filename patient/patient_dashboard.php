@@ -259,19 +259,19 @@ LIMIT 1;
                     <div class="col-12">
                         <h4>Quick Actions</h4>
                         <div class="quick-actions">
-                            <a href="book_appointment.php" class="btn btn-primary w-100 mb-2">
+                            <a href="book_appointment.php" class="btn btn-primary w-100 mb-2" type="button">
                                 <i class="fas fa-calendar-plus"></i> Book New Appointment
                             </a>
-                            <a href="ambulance_controller.php?action=list" class="btn btn-danger w-100 mb-2">
+                            <a href="ambulance_controller.php?action=list" class="btn btn-danger w-100 mb-2" type="button">
                                 <i class="fas fa-ambulance"></i> Book Ambulance
                             </a>
-                            <a href="medical-records.php" class="btn btn-info w-100 mb-2">
+                            <a href="medical-records.php" class="btn btn-info w-100 mb-2" type="button">
                                 <i class="fas fa-file-medical"></i> View Medical Records
                             </a>
-                            <a href="prescriptions.php" class="btn btn-success w-100 mb-2">
+                            <a href="prescriptions.php" class="btn btn-success w-100 mb-2" type="button">
                                 <i class="fas fa-prescription"></i> View Prescriptions
                             </a>
-                            <a href="../blood_bank/index.php" class="btn btn-danger w-100">
+                            <a href="../blood_bank/index.php" class="btn btn-danger w-100" type="button">
                                 <i class="fas fa-tint"></i> Blood Bank
                             </a>
                         </div>

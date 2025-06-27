@@ -13,91 +13,122 @@ if (!isset($_GET['doctor_id'])) {
     exit();
 }
 
-// Remove database connection and fetching doctor details
-// $doctor_id = $_GET['doctor_id'];
-$doctor_id = isset($_GET['doctor_id']) ? $_GET['doctor_id'] : '';
-$doctor = [
-    'first_name' => 'Doctor',
-    'last_name' => $doctor_id,
-    'profile_image' => '',
-    'specialization' => 'Specialist',
-    'experience' => 'N/A',
-    'qualification' => 'N/A',
-    'hospital' => 'N/A',
-    'location' => 'N/A',
-    'consultation_fee' => 'N/A',
-    'available_days' => 'Monday,Tuesday,Wednesday,Thursday,Friday'
-];
+// Fetch doctor info from DB
+$stmt = $pdo->prepare("SELECT d.*, u.first_name, u.last_name FROM doctors d JOIN users u ON d.user_id = u.id WHERE d.id = ?");
+$stmt->execute([$_GET['doctor_id']]);
+$doctor = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$doctor) {
+    die('Doctor not found.');
+}
+
+// Fetch doctor availability slots
+$stmt = $pdo->prepare("SELECT * FROM doctor_availability WHERE doctor_id = ? ORDER BY FIELD(day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), start_time");
+$stmt->execute([$_GET['doctor_id']]);
+$slots = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Build available days and slots by day
+$available_days = [];
+$slots_by_day = [];
+foreach ($slots as $slot) {
+    $available_days[$slot['day_of_week']] = true;
+    $slots_by_day[$slot['day_of_week']][] = [
+        'start_time' => $slot['start_time'],
+        'end_time' => $slot['end_time'],
+        'id' => $slot['id']
+    ];
+}
+$available_days = array_keys($available_days);
 
 // Handle appointment booking
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $appointment_date = $_POST['appointment_date'];
     $appointment_time = $_POST['appointment_time'];
+    $slot_id = $_POST['slot_id'] ?? null;
     $reason = str_replace(["\n", "\r", ","], [" ", " ", ";"], $_POST['reason']);
     $status = 'pending';
     $created_at = date('Y-m-d H:i:s');
     $doctor_id = $_GET['doctor_id'];
     $patient_id = $_SESSION['user']['id'];
     // Get patientId from patients table
-    $patientId = null;
-    try {
-        $pdo = new PDO('mysql:host=localhost;dbname=healthcare', 'root', ''); // adjust credentials if needed
-        $stmt = $pdo->prepare("SELECT id FROM patients WHERE user_id = ? LIMIT 1");
-        $stmt->execute([$patient_id]);
-        $patientId = $stmt->fetchColumn();
-    } catch (Exception $e) { $patientId = null; }
-    
-    // Check for duplicate appointment
-    $duplicate = false;
-    $allowRepeat = false;
-    if (($handle = fopen('../appointments.txt', 'r')) !== false) {
-        while (($data = fgetcsv($handle)) !== false) {
-            if (count($data) < 7) continue;
-            list($doc_id, $pat_id, $date, $time, $reason, $status, $created_at) = $data;
-            if ($doc_id == $doctor_id && $pat_id == $patientId && $date == $appointment_date) {
-                // Check if a prescription exists for this doctor, patient, and date
-                if (strtolower($status) === 'completed') {
-                    if (($phandle = fopen('../prescriptions.txt', 'r')) !== false) {
-                        while (($pdata = fgetcsv($phandle)) !== false) {
-                            if (count($pdata) < 7) continue;
-                            list($pres_pid, $pres_docid, $medication, $dosage, $instructions, $pres_status, $pres_date) = $pdata;
-                            if ($pres_pid == $patientId && $pres_docid == $doctor_id && $pres_date == $appointment_date) {
-                                $allowRepeat = true;
-                                break;
-                            }
-                        }
-                        fclose($phandle);
-                    }
-                }
-                if (!$allowRepeat) {
-                    $duplicate = true;
-                    break;
-                }
+    $stmt = $pdo->prepare("SELECT id FROM patients WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$patient_id]);
+    $patientId = $stmt->fetchColumn();
+    // Validate slot
+    $validSlot = false;
+    if ($slot_id) {
+        $stmt = $pdo->prepare("SELECT * FROM doctor_availability WHERE id = ? AND doctor_id = ?");
+        $stmt->execute([$slot_id, $doctor_id]);
+        $slot = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($slot) {
+            $dayName = date('l', strtotime($appointment_date));
+            if ($slot['day_of_week'] === $dayName && $appointment_time >= $slot['start_time'] && $appointment_time <= $slot['end_time']) {
+                $validSlot = true;
             }
         }
-        fclose($handle);
     }
-    if ($duplicate) {
-        $error = 'You have already booked an appointment with this doctor on this day. Please choose another day.';
+    // Prevent double-booking for the same slot and date
+    $slotBooked = false;
+    if ($validSlot) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND TIME(appointment_date) = ?");
+        $stmt->execute([$doctor_id, $appointment_date, $appointment_time]);
+        if ($stmt->fetchColumn() > 0) {
+            $slotBooked = true;
+        }
+    }
+    if (!$validSlot) {
+        $error = 'Selected date and time do not match doctor availability.';
+    } elseif ($slotBooked) {
+        $error = 'This slot is already booked. Please choose another time.';
     } else {
-        $line = implode(",", [
-            $doctor_id,
-            $patient_id,
-            $appointment_date,
-            $appointment_time,
-            $reason,
-            $status,
-            $created_at
-        ]) . "\n";
-        file_put_contents('../appointments.txt', $line, FILE_APPEND);
-        $_SESSION['success_message'] = "Appointment request submitted successfully!";
-        header("Location: my_appointments.php");
-        exit();
+        // Check for duplicate appointment
+        $duplicate = false;
+        $allowRepeat = false;
+        if (($handle = fopen('../appointments.txt', 'r')) !== false) {
+            while (($data = fgetcsv($handle)) !== false) {
+                if (count($data) < 7) continue;
+                list($doc_id, $pat_id, $date, $time, $reason, $status, $created_at) = $data;
+                if ($doc_id == $doctor_id && $pat_id == $patientId && $date == $appointment_date) {
+                    // Check if a prescription exists for this doctor, patient, and date
+                    if (strtolower($status) === 'completed') {
+                        if (($phandle = fopen('../prescriptions.txt', 'r')) !== false) {
+                            while (($pdata = fgetcsv($phandle)) !== false) {
+                                if (count($pdata) < 7) continue;
+                                list($pres_pid, $pres_docid, $medication, $dosage, $instructions, $pres_status, $pres_date) = $pdata;
+                                if ($pres_pid == $patientId && $pres_docid == $doctor_id && $pres_date == $appointment_date) {
+                                    $allowRepeat = true;
+                                    break;
+                                }
+                            }
+                            fclose($phandle);
+                        }
+                    }
+                    if (!$allowRepeat) {
+                        $duplicate = true;
+                        break;
+                    }
+                }
+            }
+            fclose($handle);
+        }
+        if ($duplicate) {
+            $error = 'You have already booked an appointment with this doctor on this day. Please choose another day.';
+        } else {
+            $line = implode(",", [
+                $doctor_id,
+                $patient_id,
+                $appointment_date,
+                $appointment_time,
+                $reason,
+                $status,
+                $created_at
+            ]) . "\n";
+            file_put_contents('../appointments.txt', $line, FILE_APPEND);
+            $_SESSION['success_message'] = "Appointment request submitted successfully!";
+            header("Location: my_appointments.php");
+            exit();
+        }
     }
 }
-
-// Get doctor's available days
-$available_days = explode(',', $doctor['available_days']);
 ?>
 
 <!DOCTYPE html>
@@ -224,23 +255,20 @@ $available_days = explode(',', $doctor['available_days']);
                         <form method="POST" id="appointmentForm">
                             <div class="mb-3">
                                 <label class="form-label">Select Date</label>
-                                <input type="date" class="form-control" name="appointment_date" required
-                                       min="<?php echo date('Y-m-d'); ?>"
-                                       onchange="validateDate(this.value)">
+                                <input type="date" class="form-control" name="appointment_date" id="appointment_date" required min="<?php echo date('Y-m-d'); ?>">
                                 <div class="form-text">Please select from available days: <?php echo implode(', ', $available_days); ?></div>
                             </div>
-
                             <div class="mb-3">
-                                <label class="form-label">Select Time</label>
-                                <input type="time" class="form-control" name="appointment_time" required>
+                                <label class="form-label">Select Time Slot</label>
+                                <select class="form-select" name="appointment_time" id="appointment_time" required disabled>
+                                    <option value="">Select a date first</option>
+                                </select>
+                                <input type="hidden" name="slot_id" id="slot_id">
                             </div>
-
                             <div class="mb-3">
                                 <label class="form-label">Reason for Visit</label>
-                                <textarea class="form-control" name="reason" rows="4" required
-                                          placeholder="Please describe your symptoms or reason for consultation"></textarea>
+                                <textarea class="form-control" name="reason" rows="4" required placeholder="Please describe your symptoms or reason for consultation"></textarea>
                             </div>
-
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary">
                                     <i class="bi bi-calendar-check"></i> Request Appointment
@@ -254,38 +282,52 @@ $available_days = explode(',', $doctor['available_days']);
     </div>
 
     <script>
+        const slotsByDay = <?php echo json_encode($slots_by_day); ?>;
         const availableDays = <?php echo json_encode($available_days); ?>;
         
-        function validateDate(date) {
-            const selectedDate = new Date(date);
-            const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
-            
+        function getDayName(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { weekday: 'long' });
+        }
+
+        document.getElementById('appointment_date').addEventListener('change', function() {
+            const date = this.value;
+            const dayName = getDayName(date);
+            const timeSelect = document.getElementById('appointment_time');
+            timeSelect.innerHTML = '';
             if (!availableDays.includes(dayName)) {
                 alert('Doctor is not available on ' + dayName + 's. Please select another day.');
-                document.querySelector('input[name="appointment_date"]').value = '';
+                this.value = '';
+                timeSelect.disabled = true;
+                return;
             }
-        }
-
-        function selectTime(element) {
-            // Remove selected class from all time slots
-            document.querySelectorAll('.time-slot').forEach(slot => {
-                slot.classList.remove('selected');
+            const slots = slotsByDay[dayName] || [];
+            if (slots.length === 0) {
+                timeSelect.innerHTML = '<option value="">No slots available for this day</option>';
+                timeSelect.disabled = true;
+                return;
+            }
+            timeSelect.disabled = false;
+            timeSelect.innerHTML = '<option value="">Select a time slot</option>';
+            slots.forEach(slot => {
+                const label = slot.start_time.substring(0,5) + ' - ' + slot.end_time.substring(0,5);
+                const value = slot.start_time + '-' + slot.end_time + '-' + slot.id;
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = label;
+                timeSelect.appendChild(opt);
             });
-            
-            // Add selected class to clicked time slot
-            element.classList.add('selected');
-            
-            // Update hidden input
-            document.getElementById('selectedTime').value = element.dataset.time;
-        }
+        });
 
-        // Form validation
-        document.getElementById('appointmentForm').onsubmit = function(e) {
-            if (!document.getElementById('selectedTime').value) {
-                e.preventDefault();
-                alert('Please select an appointment time');
+        document.getElementById('appointment_time').addEventListener('change', function() {
+            const val = this.value;
+            if (val) {
+                const parts = val.split('-');
+                document.getElementById('slot_id').value = parts[2];
+            } else {
+                document.getElementById('slot_id').value = '';
             }
-        };
+        });
     </script>
 </body>
 </html>

@@ -13,6 +13,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'];
     $password = $_POST['password'];
     
+    // Fixed admin credentials
+    if (($email === 'sampleadmin@gmail.com' && $password === '1234') || ($email === 'admin2@gmail.com' && $password === 'admin123')) {
+        $_SESSION['user_id'] = 0; // or any fixed ID
+        $_SESSION['user'] = [
+            'id' => 0,
+            'first_name' => 'Admin',
+            'last_name' => '',
+            'email' => $email,
+            'role' => 'admin'
+        ];
+        header("Location: dashboard.php");
+        exit();
+    }
+
     try {
         $stmt = $pdo->prepare("
             SELECT id, first_name, last_name, email, password, role 

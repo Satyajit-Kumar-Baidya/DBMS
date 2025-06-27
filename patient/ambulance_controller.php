@@ -1,6 +1,10 @@
 <?php
 require_once '../dbConnect.php';
 session_start();
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'patient') {
+    header("Location: ../login.php");
+    exit();
+}
 
 class AmbulanceController {
     private $pdo;
@@ -34,7 +38,7 @@ class AmbulanceController {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function bookAmbulance($ambulanceId, $userId, $pickupLocation, $destination, $bookingDate, $bookingTime) {
+    public function bookAmbulance($ambulanceId, $userId, $pickupLocation, $destination, $bookingDate, $bookingTime, $patientContact, $emergencyType, $specialInstructions, $paymentMethod, $estimatedPrice) {
         try {
             $this->pdo->beginTransaction();
 
@@ -52,8 +56,13 @@ class AmbulanceController {
                     pickup_location, 
                     destination, 
                     booking_date, 
-                    booking_time
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    booking_time,
+                    patient_contact,
+                    emergency_type,
+                    special_instructions,
+                    payment_method,
+                    estimated_price
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $stmt->execute([
@@ -62,7 +71,12 @@ class AmbulanceController {
                 $pickupLocation,
                 $destination,
                 $bookingDate,
-                $bookingTime
+                $bookingTime,
+                $patientContact,
+                $emergencyType,
+                $specialInstructions,
+                $paymentMethod,
+                $estimatedPrice
             ]);
 
             // Update ambulance status
@@ -154,11 +168,6 @@ class AmbulanceController {
 }
 
 // Handle requests
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../login.php");
-    exit();
-}
-
 $controller = new AmbulanceController($pdo);
 
 if (isset($_GET['action'])) {
@@ -183,23 +192,16 @@ if (isset($_GET['action'])) {
         case 'book':
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 try {
-                    if (empty($_POST['ambulance_id']) || empty($_POST['pickup_location']) || 
-                        empty($_POST['destination']) || empty($_POST['booking_date']) || 
-                        empty($_POST['booking_time'])) {
-                        throw new Exception("All fields are required");
+                    foreach (['ambulance_id','pickup_location','destination','booking_date','booking_time','patient_contact','emergency_type','payment_method'] as $field) {
+                        if (empty($_POST[$field])) throw new Exception("All fields are required");
                     }
-
                     $controller->bookAmbulance(
-                        $_POST['ambulance_id'],
-                        $_SESSION['user_id'],
-                        $_POST['pickup_location'],
-                        $_POST['destination'],
-                        $_POST['booking_date'],
-                        $_POST['booking_time']
+                        $_POST['ambulance_id'], $_SESSION['user']['id'], $_POST['pickup_location'], $_POST['destination'],
+                        $_POST['booking_date'], $_POST['booking_time'], $_POST['patient_contact'], $_POST['emergency_type'],
+                        $_POST['special_instructions'] ?? '', $_POST['payment_method'], $_POST['estimated_price'] ?? null
                     );
-
                     $_SESSION['success'] = "Ambulance booked successfully!";
-                    header("Location: patient_dashboard.php");
+                    header("Location: ambulance_controller.php?action=my_bookings");
                     exit();
                 } catch (Exception $e) {
                     $_SESSION['error'] = $e->getMessage();
@@ -210,7 +212,7 @@ if (isset($_GET['action'])) {
             break;
 
         case 'my_bookings':
-            $bookings = $controller->getPatientBookings($_SESSION['user_id']);
+            $bookings = $controller->getPatientBookings($_SESSION['user']['id']);
             include 'my_ambulance_bookings.php';
             break;
 
@@ -222,7 +224,7 @@ if (isset($_GET['action'])) {
             }
 
             try {
-                $controller->cancelBooking($_GET['id'], $_SESSION['user_id']);
+                $controller->cancelBooking($_GET['id'], $_SESSION['user']['id']);
                 $_SESSION['success'] = "Booking cancelled successfully";
             } catch (Exception $e) {
                 $_SESSION['error'] = $e->getMessage();

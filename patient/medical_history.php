@@ -49,11 +49,11 @@ try {
     $params = [$patientId];
 
     if ($startDate) {
-        $query .= " AND mh.consultation_date >= ?";
+        $query .= " AND mh.visit_date >= ?";
         $params[] = $startDate;
     }
     if ($endDate) {
-        $query .= " AND mh.consultation_date <= ?";
+        $query .= " AND mh.visit_date <= ?";
         $params[] = $endDate;
     }
     if ($doctorId) {
@@ -65,7 +65,7 @@ try {
         $params[] = $testType;
     }
 
-    $query .= " ORDER BY mh.consultation_date DESC";
+    $query .= " ORDER BY mh.visit_date DESC";
 
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
@@ -189,7 +189,7 @@ try {
                                     <tbody>
                                         <?php foreach ($medicalHistory as $record): ?>
                                             <tr>
-                                                <td><?php echo date('M d, Y', strtotime($record['consultation_date'])); ?></td>
+                                                <td><?php echo date('M d, Y', strtotime($record['visit_date'])); ?></td>
                                                 <td>Dr. <?php echo htmlspecialchars($record['doctor_first_name'] . ' ' . $record['doctor_last_name']); ?></td>
                                                 <td><?php echo htmlspecialchars($record['specialization']); ?></td>
                                                 <td><?php echo htmlspecialchars($record['diagnosis'] ?? 'N/A'); ?></td>

@@ -13,6 +13,7 @@ $doctorId = null;
 $schedule = [];
 $errors = [];
 $success = '';
+$availability = [];
 
 // Get doctor ID
 try {
@@ -26,11 +27,36 @@ try {
         exit();
     }
 
-    // Fetch doctor's schedule/appointments for display (placeholder)
-    // This could be customized to show a calendar view or a list of upcoming slots
-     $stmt = $pdo->prepare("SELECT a.*, p.user_id as patient_user_id, pu.first_name as patient_first_name, pu.last_name as patient_last_name FROM appointments a JOIN patients p ON a.patient_id = p.id JOIN users pu ON p.user_id = pu.id WHERE a.doctor_id = ? ORDER BY a.appointment_date ASC");
+    // Handle add availability
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_availability'])) {
+        $day = $_POST['day_of_week'] ?? '';
+        $start = $_POST['start_time'] ?? '';
+        $end = $_POST['end_time'] ?? '';
+        if ($day && $start && $end) {
+            $stmt = $pdo->prepare("INSERT INTO doctor_availability (doctor_id, day_of_week, start_time, end_time) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$doctorId, $day, $start, $end]);
+            $success = 'Availability slot added.';
+        } else {
+            $errors[] = 'All fields are required for availability.';
+        }
+    }
+    // Handle delete availability
+    if (isset($_GET['delete_avail'])) {
+        $availId = (int)$_GET['delete_avail'];
+        $stmt = $pdo->prepare("DELETE FROM doctor_availability WHERE id = ? AND doctor_id = ?");
+        $stmt->execute([$availId, $doctorId]);
+        $success = 'Availability slot deleted.';
+    }
+
+    // Fetch doctor's schedule/appointments for display (existing)
+    $stmt = $pdo->prepare("SELECT a.*, p.user_id as patient_user_id, pu.first_name as patient_first_name, pu.last_name as patient_last_name FROM appointments a JOIN patients p ON a.patient_id = p.id JOIN users pu ON p.user_id = pu.id WHERE a.doctor_id = ? ORDER BY a.appointment_date ASC");
     $stmt->execute([$doctorId]);
     $schedule = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch doctor's availability
+    $stmt = $pdo->prepare("SELECT * FROM doctor_availability WHERE doctor_id = ? ORDER BY FIELD(day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), start_time");
+    $stmt->execute([$doctorId]);
+    $availability = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     $errors[] = "Database Error: " . $e->getMessage();
@@ -143,8 +169,60 @@ try {
                         <h5 class="mb-0">Manage Availability</h5>
                     </div>
                     <div class="card-body">
-                        <p class="text-center">Availability management features would go here.</p>
-                        <!-- Example: Form to add available time slots -->
+                        <h6>Add New Availability Slot</h6>
+                        <form method="POST" class="row g-2 mb-4">
+                            <input type="hidden" name="add_availability" value="1">
+                            <div class="col-md-3">
+                                <select class="form-select" name="day_of_week" required>
+                                    <option value="">Day</option>
+                                    <option>Monday</option>
+                                    <option>Tuesday</option>
+                                    <option>Wednesday</option>
+                                    <option>Thursday</option>
+                                    <option>Friday</option>
+                                    <option>Saturday</option>
+                                    <option>Sunday</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="time" class="form-control" name="start_time" required>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="time" class="form-control" name="end_time" required>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-success w-100">Add Slot</button>
+                            </div>
+                        </form>
+                        <h6>Current Availability</h6>
+                        <?php if (empty($availability)): ?>
+                            <p class="text-center">No availability slots set.</p>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Day</th>
+                                            <th>Start Time</th>
+                                            <th>End Time</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($availability as $slot): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($slot['day_of_week']); ?></td>
+                                            <td><?php echo htmlspecialchars(substr($slot['start_time'],0,5)); ?></td>
+                                            <td><?php echo htmlspecialchars(substr($slot['end_time'],0,5)); ?></td>
+                                            <td>
+                                                <a href="?delete_avail=<?php echo $slot['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Delete this slot?');">Delete</a>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
