@@ -28,14 +28,14 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['user']['role']) || $_SESSI
 <a href="patient_dashboard.php" class="btn btn-secondary position-absolute top-0 end-0 m-4">Dashboard</a>
 <div class="container mt-5">
     <h2 class="text-center">Available Ambulances</h2>
-    <?php if (empty($ambulances)): ?>
+        <?php if (empty($ambulances)): ?>
         <div class="alert alert-info text-center">No ambulances are available at the moment. Please try again later.</div>
-    <?php else: ?>
+        <?php else: ?>
         <div class="row">
-        <?php foreach ($ambulances as $ambulance): ?>
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
+            <?php foreach ($ambulances as $ambulance): ?>
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
                         <h5 class="card-title text-primary"><?php echo htmlspecialchars($ambulance['vehicle_type']); ?></h5>
                         <ul class="list-unstyled mb-3">
                             <li><strong>Vehicle Number:</strong> <?php echo htmlspecialchars($ambulance['vehicle_number']); ?></li>
@@ -45,10 +45,10 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['user']['role']) || $_SESSI
                             <li><strong>Price per KM:</strong> $<?php echo number_format($ambulance['price_per_km'], 2); ?></li>
                         </ul>
                         <a href="ambulance_controller.php?action=book_form&id=<?php echo $ambulance['id']; ?>" class="btn btn-primary w-100 mb-2">Book Now</a>
+                        </div>
                     </div>
                 </div>
-            </div>
-        <?php endforeach; ?>
+            <?php endforeach; ?>
         </div>
     <?php endif; ?>
     <div class="text-center mt-4">

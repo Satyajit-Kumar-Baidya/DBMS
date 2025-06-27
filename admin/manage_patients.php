@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 break;
             case 'edit':
-                $stmt = $pdo->prepare("UPDATE patients SET first_name = ?, last_name = ?, date_of_birth = ?, gender = ?, email = ?, phone = ?, address = ?, blood_group = ? WHERE patient_id = ?");
+                $stmt = $pdo->prepare("UPDATE patients SET first_name = ?, last_name = ?, date_of_birth = ?, gender = ?, email = ?, phone = ?, address = ?, blood_group = ? WHERE id = ?");
                 $stmt->execute([
                     $_POST['first_name'],
                     $_POST['last_name'],
@@ -40,12 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_POST['phone'],
                     $_POST['address'],
                     $_POST['blood_group'],
-                    $_POST['patient_id']
+                    $_POST['id']
                 ]);
                 break;
             case 'delete':
-                $stmt = $pdo->prepare("DELETE FROM patients WHERE patient_id = ?");
-                $stmt->execute([$_POST['patient_id']]);
+                $stmt = $pdo->prepare("DELETE FROM patients WHERE id = ?");
+                $stmt->execute([$_POST['id']]);
                 break;
         }
         header("Location: manage_patients.php");
@@ -53,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch all patients
-$stmt = $pdo->query("SELECT * FROM patients ORDER BY patient_id DESC");
+// Fetch all patients with user info
+$stmt = $pdo->query("SELECT p.id, p.date_of_birth, p.gender, p.blood_group, u.first_name, u.last_name, u.email FROM patients p JOIN users u ON p.user_id = u.id ORDER BY p.id DESC");
 $patients = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -85,7 +85,6 @@ $patients = $stmt->fetchAll();
                                 <th>Date of Birth</th>
                                 <th>Gender</th>
                                 <th>Email</th>
-                                <th>Phone</th>
                                 <th>Blood Group</th>
                                 <th>Actions</th>
                             </tr>
@@ -93,17 +92,16 @@ $patients = $stmt->fetchAll();
                         <tbody>
                             <?php foreach ($patients as $patient): ?>
                             <tr>
-                                <td><?php echo $patient['patient_id']; ?></td>
+                                <td><?php echo $patient['id']; ?></td>
                                 <td><?php echo $patient['first_name'] . ' ' . $patient['last_name']; ?></td>
                                 <td><?php echo $patient['date_of_birth']; ?></td>
                                 <td><?php echo $patient['gender']; ?></td>
                                 <td><?php echo $patient['email']; ?></td>
-                                <td><?php echo $patient['phone']; ?></td>
                                 <td><?php echo $patient['blood_group']; ?></td>
                                 <td>
                                     <form method="POST" style="display:inline;">
                                         <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="patient_id" value="<?php echo $patient['patient_id']; ?>">
+                                        <input type="hidden" name="id" value="<?php echo $patient['id']; ?>">
                                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                     </form>
                                     <!-- Edit button/modal can be added here -->

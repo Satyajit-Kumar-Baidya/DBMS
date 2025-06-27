@@ -25,7 +25,7 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['user']['role']) || $_SESSI
         <div class="alert alert-info text-center">You haven't made any ambulance bookings yet.</div>
     <?php else: ?>
         <div class="card">
-            <div class="card-body">
+                        <div class="card-body">
                 <table class="table table-bordered table-hover mb-0">
                     <thead class="table-primary">
                         <tr>
@@ -47,10 +47,10 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['user']['role']) || $_SESSI
                             <td><?php echo htmlspecialchars($b['destination']); ?></td>
                             <td><?php echo htmlspecialchars($b['status']); ?></td>
                         </tr>
-                    <?php endforeach; ?>
+            <?php endforeach; ?>
                     </tbody>
                 </table>
-            </div>
+        </div>
         </div>
     <?php endif; ?>
     <div class="text-center mt-4">

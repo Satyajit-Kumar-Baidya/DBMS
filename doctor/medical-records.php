@@ -68,7 +68,7 @@ try {
         }
     }
 
-    // Fetch medical records associated with this doctor (placeholder)
+     // Fetch medical records associated with this doctor (placeholder)
     $stmt = $pdo->prepare("SELECT mh.*, u.first_name as patient_first_name, u.last_name as patient_last_name 
                           FROM medical_history mh 
                           JOIN patients p ON mh.patient_id = p.id 

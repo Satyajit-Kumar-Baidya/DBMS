@@ -50,9 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $doctor_id = $_GET['doctor_id'];
     $patient_id = $_SESSION['user']['id'];
     // Get patientId from patients table
-    $stmt = $pdo->prepare("SELECT id FROM patients WHERE user_id = ? LIMIT 1");
-    $stmt->execute([$patient_id]);
-    $patientId = $stmt->fetchColumn();
+        $stmt = $pdo->prepare("SELECT id FROM patients WHERE user_id = ? LIMIT 1");
+        $stmt->execute([$patient_id]);
+        $patientId = $stmt->fetchColumn();
     // Validate slot
     $validSlot = false;
     if ($slot_id) {
@@ -80,54 +80,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($slotBooked) {
         $error = 'This slot is already booked. Please choose another time.';
     } else {
-        // Check for duplicate appointment
-        $duplicate = false;
-        $allowRepeat = false;
-        if (($handle = fopen('../appointments.txt', 'r')) !== false) {
-            while (($data = fgetcsv($handle)) !== false) {
-                if (count($data) < 7) continue;
-                list($doc_id, $pat_id, $date, $time, $reason, $status, $created_at) = $data;
-                if ($doc_id == $doctor_id && $pat_id == $patientId && $date == $appointment_date) {
-                    // Check if a prescription exists for this doctor, patient, and date
-                    if (strtolower($status) === 'completed') {
-                        if (($phandle = fopen('../prescriptions.txt', 'r')) !== false) {
-                            while (($pdata = fgetcsv($phandle)) !== false) {
-                                if (count($pdata) < 7) continue;
-                                list($pres_pid, $pres_docid, $medication, $dosage, $instructions, $pres_status, $pres_date) = $pdata;
-                                if ($pres_pid == $patientId && $pres_docid == $doctor_id && $pres_date == $appointment_date) {
-                                    $allowRepeat = true;
-                                    break;
-                                }
+    // Check for duplicate appointment
+    $duplicate = false;
+    $allowRepeat = false;
+    if (($handle = fopen('../appointments.txt', 'r')) !== false) {
+        while (($data = fgetcsv($handle)) !== false) {
+            if (count($data) < 7) continue;
+            list($doc_id, $pat_id, $date, $time, $reason, $status, $created_at) = $data;
+            if ($doc_id == $doctor_id && $pat_id == $patientId && $date == $appointment_date) {
+                // Check if a prescription exists for this doctor, patient, and date
+                if (strtolower($status) === 'completed') {
+                    if (($phandle = fopen('../prescriptions.txt', 'r')) !== false) {
+                        while (($pdata = fgetcsv($phandle)) !== false) {
+                            if (count($pdata) < 7) continue;
+                            list($pres_pid, $pres_docid, $medication, $dosage, $instructions, $pres_status, $pres_date) = $pdata;
+                            if ($pres_pid == $patientId && $pres_docid == $doctor_id && $pres_date == $appointment_date) {
+                                $allowRepeat = true;
+                                break;
                             }
-                            fclose($phandle);
                         }
-                    }
-                    if (!$allowRepeat) {
-                        $duplicate = true;
-                        break;
+                        fclose($phandle);
                     }
                 }
+                if (!$allowRepeat) {
+                    $duplicate = true;
+                    break;
+                }
             }
-            fclose($handle);
         }
-        if ($duplicate) {
-            $error = 'You have already booked an appointment with this doctor on this day. Please choose another day.';
-        } else {
-            $line = implode(",", [
-                $doctor_id,
-                $patient_id,
-                $appointment_date,
-                $appointment_time,
-                $reason,
-                $status,
-                $created_at
-            ]) . "\n";
-            file_put_contents('../appointments.txt', $line, FILE_APPEND);
-            $_SESSION['success_message'] = "Appointment request submitted successfully!";
-            header("Location: my_appointments.php");
-            exit();
-        }
+        fclose($handle);
     }
+    if ($duplicate) {
+        $error = 'You have already booked an appointment with this doctor on this day. Please choose another day.';
+    } else {
+        $line = implode(",", [
+            $doctor_id,
+            $patient_id,
+            $appointment_date,
+            $appointment_time,
+            $reason,
+            $status,
+            $created_at
+        ]) . "\n";
+        file_put_contents('../appointments.txt', $line, FILE_APPEND);
+        $_SESSION['success_message'] = "Appointment request submitted successfully!";
+        header("Location: my_appointments.php");
+        exit();
+    }
+}
 }
 ?>
 

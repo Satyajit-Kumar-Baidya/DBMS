@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 require_once '../dbConnect.php';
 
@@ -22,13 +26,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit();
 }
 
-// Fetch all appointments
-$stmt = $pdo->query("SELECT a.*, p.first_name AS patient_first_name, p.last_name AS patient_last_name, d.first_name AS doctor_first_name, d.last_name AS doctor_last_name FROM appointments a JOIN patients p ON a.patient_id = p.id JOIN doctors d ON a.doctor_id = d.id ORDER BY a.appointment_date DESC, a.appointment_time DESC");
+// Fetch all appointments with correct joins for names
+$stmt = $pdo->query("SELECT a.*, up.first_name AS patient_first_name, up.last_name AS patient_last_name, ud.first_name AS doctor_first_name, ud.last_name AS doctor_last_name FROM appointments a JOIN patients p ON a.patient_id = p.id JOIN users up ON p.user_id = up.id JOIN doctors d ON a.doctor_id = d.id JOIN users ud ON d.user_id = ud.id ORDER BY a.appointment_date DESC, a.appointment_time DESC");
 $appointments = $stmt->fetchAll();
 
 // Fetch all patients and doctors for the form
-$patients = $pdo->query("SELECT id, first_name, last_name FROM patients ORDER BY first_name, last_name")->fetchAll();
-$doctors = $pdo->query("SELECT id, first_name, last_name FROM doctors ORDER BY first_name, last_name")->fetchAll();
+$patients = $pdo->query("SELECT p.id, u.first_name, u.last_name FROM patients p JOIN users u ON p.user_id = u.id ORDER BY u.first_name, u.last_name")->fetchAll();
+$doctors = $pdo->query("SELECT d.id, u.first_name, u.last_name FROM doctors d JOIN users u ON d.user_id = u.id ORDER BY u.first_name, u.last_name")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">

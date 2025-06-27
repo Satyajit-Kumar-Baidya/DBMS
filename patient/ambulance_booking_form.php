@@ -25,7 +25,7 @@ if (!isset($ambulance)) {
 </head>
 <body>
 <div class="container mt-5">
-    <div class="card">
+            <div class="card">
         <div class="card-body">
             <h4 class="text-center text-primary">Book Ambulance</h4>
             <form action="ambulance_controller.php?action=book" method="POST" id="bookingForm">
@@ -47,7 +47,7 @@ if (!isset($ambulance)) {
                 <div class="mb-3">
                     <label class="form-label">Patient Contact Number</label>
                     <input type="text" class="form-control" name="patient_contact" value="<?php echo htmlspecialchars($_SESSION['user']['phone'] ?? ''); ?>" required>
-                </div>
+                            </div>
                 <div class="mb-3">
                     <label class="form-label">Emergency Type</label>
                     <select class="form-select" name="emergency_type" required>
@@ -58,11 +58,11 @@ if (!isset($ambulance)) {
                         <option value="General">General</option>
                         <option value="Other">Other</option>
                     </select>
-                </div>
+                            </div>
                 <div class="mb-3">
                     <label class="form-label">Special Instructions</label>
                     <textarea class="form-control" name="special_instructions"></textarea>
-                </div>
+                        </div>
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Date</label>
@@ -71,13 +71,13 @@ if (!isset($ambulance)) {
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Time</label>
                         <input type="time" class="form-control" name="booking_time" required>
-                    </div>
+                        </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Estimated Price ($)</label>
                         <input type="number" class="form-control" name="estimated_price" step="0.01">
-                    </div>
-                </div>
-                <div class="mb-3">
+                                </div>
+                            </div>
+                                <div class="mb-3">
                     <label class="form-label">Payment Method</label>
                     <select class="form-select" name="payment_method" required>
                         <option value="">Select Payment Method</option>
@@ -85,12 +85,12 @@ if (!isset($ambulance)) {
                         <option value="Card">Card</option>
                         <option value="Insurance">Insurance</option>
                     </select>
-                </div>
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary">Confirm Booking</button>
-                    <a href="ambulance_controller.php?action=list" class="btn btn-outline-secondary">Back to List</a>
-                </div>
-            </form>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Confirm Booking</button>
+                            <a href="ambulance_controller.php?action=list" class="btn btn-outline-secondary">Back to List</a>
+                        </div>
+                    </form>
             <div class="text-center mt-3">
                 <a href="patient_dashboard.php" class="btn btn-secondary">Back to Dashboard</a>
             </div>

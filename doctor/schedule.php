@@ -49,7 +49,7 @@ try {
     }
 
     // Fetch doctor's schedule/appointments for display (existing)
-    $stmt = $pdo->prepare("SELECT a.*, p.user_id as patient_user_id, pu.first_name as patient_first_name, pu.last_name as patient_last_name FROM appointments a JOIN patients p ON a.patient_id = p.id JOIN users pu ON p.user_id = pu.id WHERE a.doctor_id = ? ORDER BY a.appointment_date ASC");
+     $stmt = $pdo->prepare("SELECT a.*, p.user_id as patient_user_id, pu.first_name as patient_first_name, pu.last_name as patient_last_name FROM appointments a JOIN patients p ON a.patient_id = p.id JOIN users pu ON p.user_id = pu.id WHERE a.doctor_id = ? ORDER BY a.appointment_date ASC");
     $stmt->execute([$doctorId]);
     $schedule = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

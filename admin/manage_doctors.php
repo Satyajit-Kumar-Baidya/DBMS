@@ -27,19 +27,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 break;
             case 'edit':
-                $stmt = $pdo->prepare("UPDATE doctors SET first_name = ?, last_name = ?, specialization = ?, email = ?, phone = ? WHERE doctor_id = ?");
+                $stmt = $pdo->prepare("UPDATE doctors SET first_name = ?, last_name = ?, specialization = ?, email = ?, phone = ? WHERE id = ?");
                 $stmt->execute([
                     $_POST['first_name'],
                     $_POST['last_name'],
                     $_POST['specialization'],
                     $_POST['email'],
                     $_POST['phone'],
-                    $_POST['doctor_id']
+                    $_POST['id']
                 ]);
                 break;
             case 'delete':
-                $stmt = $pdo->prepare("DELETE FROM doctors WHERE doctor_id = ?");
-                $stmt->execute([$_POST['doctor_id']]);
+                $stmt = $pdo->prepare("DELETE FROM doctors WHERE id = ?");
+                $stmt->execute([$_POST['id']]);
                 break;
         }
         header("Location: manage_doctors.php");
@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch all doctors
-$stmt = $pdo->query("SELECT * FROM doctors ORDER BY doctor_id DESC");
+// Fetch all doctors with user info
+$stmt = $pdo->query("SELECT d.id, d.specialization, u.first_name, u.last_name, u.email FROM doctors d JOIN users u ON d.user_id = u.id ORDER BY d.id DESC");
 $doctors = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -78,22 +78,20 @@ $doctors = $stmt->fetchAll();
                                 <th>Name</th>
                                 <th>Specialization</th>
                                 <th>Email</th>
-                                <th>Phone</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($doctors as $doctor): ?>
                             <tr>
-                                <td><?php echo $doctor['doctor_id']; ?></td>
+                                <td><?php echo $doctor['id']; ?></td>
                                 <td><?php echo $doctor['first_name'] . ' ' . $doctor['last_name']; ?></td>
                                 <td><?php echo $doctor['specialization']; ?></td>
                                 <td><?php echo $doctor['email']; ?></td>
-                                <td><?php echo $doctor['phone']; ?></td>
                                 <td>
                                     <form method="POST" style="display:inline;">
                                         <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="doctor_id" value="<?php echo $doctor['doctor_id']; ?>">
+                                        <input type="hidden" name="id" value="<?php echo $doctor['id']; ?>">
                                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                     </form>
                                     <!-- Edit button/modal can be added here -->
