@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Health Chatbot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    #messages {
+      flex: 1;
+      padding: 15px;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow-y: auto;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 10px;
+    }
+
+    .msg {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+
+    .msg.user {
+      background: #d1e7dd;
+      align-self: flex-end;
+    }
+
+    .msg.bot {
+      background: #f8d7da;
+      align-self: flex-start;
+    }
+
+    .typing-indicator {
+      font-style: italic;
+      color: gray;
+      margin: 5px 0;
+    }
+
+    .input-area {
+      display: flex;
+    }
+
+    #userInput {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px 0 0 8px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 0 8px 8px 0;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .dark {
+      background: #121212;
+      color: #ffffff;
+    }
+
+    .dark #messages {
+      background: #1f1f1f;
+    }
+
+    .dark .msg.user {
+      background: #37474f;
+    }
+
+    .dark .msg.bot {
+      background: #4e342e;
+    }
+
+    .dark button {
+      background: #bb86fc;
+    }
+
+    .dark button:hover {
+      background: #9b59b6;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <h2>HealthBot 💬</h2>
+    <div id="messages"></div>
+
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Type your symptoms..." onkeydown="if(event.key === 'Enter') sendMessage()">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <button style="margin-top: 10px;" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+  </div>
+
+  <script>
+    function sendMessage() {
+      const input = document.getElementById('userInput');
+      const message = input.value.trim();
+      if (!message) return;
+
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.innerHTML += `<div class="msg user">You: ${message}</div>`;
+      input.value = '';
+      messagesDiv.innerHTML += `<div class="typing-indicator" id="typing">Bot is typing...</div>`;
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+      fetch('bot.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'message=' + encodeURIComponent(message)
+      })
+      .then(response => response.text())
+      .then(reply => {
+        const typingIndicator = document.getElementById('typing');
+        if (typingIndicator) typingIndicator.remove();
+        messagesDiv.innerHTML += `<div class="msg bot">Bot: ${reply}</div>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+    }
+  </script>
+</body>
+</html>

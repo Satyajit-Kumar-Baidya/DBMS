@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Blood Bank and Chatbot Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 40px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #2c3e50;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        @media print {
+            body {
+                margin: 20px;
+            }
+            pre {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Blood Bank and Chatbot Code Explanation</h1>
+
+        <h2>Blood Bank Module</h2>
+
+        <h3>1. Navigation System (`navigation.php`)</h3>
+        <pre><code>// Session variables to check user roles
+$is_admin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+$is_person = isset($_SESSION['person_logged_in']) && $_SESSION['person_logged_in'] === true;
+$is_doctor = isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'doctor';
+$is_patient = isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'patient';
+
+// Doctors get admin privileges
+if ($is_doctor) {
+    $is_admin = true;
+}
+
+// Get current page for active menu highlighting
+$current_page = basename($_SERVER['PHP_SELF']);</code></pre>
+        <p>This code manages the navigation menu based on user roles. It checks session variables to determine user type and provides appropriate menu items.</p>
+
+        <h3>2. Donor Management</h3>
+
+        <h4>`add_donor.php`</h4>
+        <pre><code>// Check user permissions
+if (!$is_admin && !$is_doctor) {
+    header("Location: index.php");
+    exit();
+}
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = trim($_POST['name'] ?? '');
+    $address = trim($_POST['address'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $blood_type = trim($_POST['blood_type'] ?? '');
+
+    // Validate and save donor data
+    if ($name && $address && $email && $phone && $blood_type) {
+        $donor_data = "$name|$address|$email|$phone|$blood_type\n";
+        file_put_contents('donors.txt', $donor_data, FILE_APPEND);
+    }
+}</code></pre>
+        <p>This file handles adding new donors. It validates user permissions and saves donor information to a text file.</p>
+
+        <h4>`edit_donor.php`</h4>
+        <pre><code>// Check permissions and get donor index
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: login.php');
+    exit();
+}
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $new_name = trim($_POST['name']);
+    $new_address = trim($_POST['address']);
+    $new_email = trim($_POST['email']);
+    $new_phone = trim($_POST['phone']);
+    $new_blood_type = trim($_POST['blood_type']);
+    
+    // Update donor record
+    $lines[$index] = "$new_name|$new_address|$new_email|$new_phone|$new_blood_type\n";
+    file_put_contents('donors.txt', $lines);
+}</code></pre>
+        <p>This file manages editing donor information. It loads existing data and allows authorized users to update it.</p>
+
+        <h4>`delete_donor.php`</h4>
+        <pre><code>// Check permissions
+if (!$is_admin && !$is_doctor) {
+    header("Location: index.php");
+    exit();
+}
+
+// Delete donor record
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['index'])) {
+    $index = (int)$_POST['index'];
+    $lines = file('donors.txt');
+    unset($lines[$index]);
+    file_put_contents('donors.txt', implode('', $lines));
+}</code></pre>
+        <p>This file handles donor deletion. It removes donor records from the text file.</p>
+
+        <h3>3. Blood Request System</h3>
+
+        <h4>`request.php`</h4>
+        <pre><code>// Get donor information
+$donor_name = isset($_GET['name']) ? htmlspecialchars($_GET['name']) : '';
+$donor_blood = isset($_GET['blood_type']) ? htmlspecialchars($_GET['blood_type']) : '';
+$donor_email = isset($_GET['email']) ? htmlspecialchars($_GET['email']) : '';
+
+// Display user's requests
+if (file_exists('requests.txt')) {
+    $lines = file('requests.txt');
+    foreach ($lines as $line) {
+        $parts = explode('|', trim($line));
+        if (count($parts) >= 6) {
+            $requester_email = $parts[4];
+            if ($requester_email === $user_email) {
+                $user_requests[] = $parts;
+            }
+        }
+    }
+}</code></pre>
+        <p>This file manages blood requests. It displays request forms and shows request history.</p>
+
+        <h4>`add_request.php`</h4>
+        <pre><code>// Check user permissions
+if (!$is_person && !$is_patient) {
+    header('Location: login.php');
+    exit();
+}
+
+// Save request
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $donor_name = htmlspecialchars($_POST['donor_name']);
+    $donor_blood = htmlspecialchars($_POST['donor_blood']);
+    $donor_email = htmlspecialchars($_POST['donor_email']);
+    $requester_name = htmlspecialchars($_POST['requester_name']);
+    $requester_email = htmlspecialchars($_POST['requester_email']);
+    $requester_phone = htmlspecialchars($_POST['requester_phone']);
+    
+    $timestamp = date('Y-m-d H:i:s');
+    $line = "$donor_name|$donor_blood|$donor_email|$requester_name|$requester_email|$requester_phone|$timestamp\n";
+    file_put_contents('requests.txt', $line, FILE_APPEND);
+}</code></pre>
+        <p>This file handles saving new blood requests with timestamps.</p>
+
+        <h3>4. Search Functionality (`search.php`)</h3>
+        <pre><code>// Handle search
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['blood_type'])) {
+    $search_blood = $_POST['blood_type'];
+    if (file_exists('donors.txt')) {
+        $lines = file('donors.txt');
+        foreach ($lines as $line) {
+            $parts = explode('|', trim($line));
+            if (count($parts) === 5 && $parts[4] === $search_blood) {
+                $results[] = $parts;
+            }
+        }
+    }
+}</code></pre>
+        <p>This file implements blood type search functionality.</p>
+
+        <h2>Chatbot Module</h2>
+
+        <h3>1. Frontend Interface (`index.html`)</h3>
+        <pre><code>&lt;div class="chat-container"&gt;
+    &lt;h2&gt;HealthBot 💬&lt;/h2&gt;
+    &lt;div id="messages"&gt;&lt;/div&gt;
+    &lt;div class="input-area"&gt;
+        &lt;input type="text" id="userInput" placeholder="Type your symptoms..."&gt;
+        &lt;button onclick="sendMessage()"&gt;Send&lt;/button&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        <p>This creates the chat interface with message display and input area.</p>
+
+        <h3>2. Backend Logic (`bot.php`)</h3>
+        <pre><code>// Process user message
+if (isset($_POST['message'])) {
+    $userMessage = strtolower(trim($_POST['message']));
+} else {
+    $userMessage = "";
+}
+
+// Generate response based on keywords
+if (strpos($userMessage, 'fever') !== false) {
+    $response = "Take paracetamol or Napa. 🤒";
+} elseif (strpos($userMessage, 'headache') !== false) {
+    $response = "Drink water and rest. You can also take Napa Extra. 💊";
+} elseif (strpos($userMessage, 'cough') !== false) {
+    $response = "Try warm fluids and lozenges. If it continues, see a doctor. 🤧";
+} elseif (strpos($userMessage, 'stomach pain') !== false) {
+    $response = "Take antacids if mild. If severe, consult a doctor. 🍵";
+} elseif (strpos($userMessage, 'cold') !== false) {
+    $response = "Stay warm and rest well. Drink plenty of fluids. 🧣";
+} elseif (strpos($userMessage, 'dizziness') !== false) {
+    $response = "Sit or lie down immediately. Drink water and avoid sudden movements. ⚠️";
+} elseif (strpos($userMessage, 'allergy') !== false) {
+    $response = "Avoid allergens and consider antihistamines after consulting a doctor. 🌼";
+} elseif (strpos($userMessage, 'back pain') !== false) {
+    $response = "Use heat packs and try gentle stretching exercises. See a doctor if pain persists. 🧘";
+} elseif (strpos($userMessage, 'diabetes') !== false) {
+    $response = "Maintain a healthy diet and monitor your blood sugar regularly. Consult your doctor for meds. 🍎";
+} elseif (strpos($userMessage, 'fatigue') !== false) {
+    $response = "Ensure you get enough rest, stay hydrated, and eat nutritious food. 💤";
+} else {
+    $response = "Sorry, I don't understand. Please ask another health-related question. 🤷‍♂️";
+}</code></pre>
+        <p>This file processes user messages and generates appropriate responses based on keywords.</p>
+
+        <h3>3. JavaScript Integration (`chatbot.js`)</h3>
+        <pre><code>function sendMessage() {
+    const input = document.getElementById('userInput');
+    const message = input.value.trim();
+    if (!message) return;
+
+    // Display user message
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML += `&lt;div class="msg user"&gt;You: ${message}&lt;/div&gt;`;
+    input.value = '';
+    
+    // Show typing indicator
+    messagesDiv.innerHTML += `&lt;div class="typing-indicator" id="typing"&gt;Bot is typing...&lt;/div&gt;`;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    // Send message to backend
+    fetch('bot.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'message=' + encodeURIComponent(message)
+    })
+    .then(response => response.text())
+    .then(reply => {
+        // Remove typing indicator and show bot response
+        const typingIndicator = document.getElementById('typing');
+        if (typingIndicator) typingIndicator.remove();
+        messagesDiv.innerHTML += `&lt;div class="msg bot"&gt;Bot: ${reply}&lt;/div&gt;`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+}
+
+// Dark mode toggle
+function toggleDarkMode() {
+    document.body.classList.toggle('dark');
+}</code></pre>
+        <p>This file handles the chat interface functionality, including message sending, response display, and dark mode toggle.</p>
+    </div>
+</body>
+</html> 
