@@ -24,13 +24,13 @@ try {
         exit();
     }
 } catch (PDOException $e) {
-    // If database error, log out user
+    // If database error, log ou user
     session_destroy();
     header("Location: ../index.php");
     exit();
 }
 
-// Fetch patient's medical records from medical_history
+// Fetch patient's medical records from medical_his..ory
 $medicalRecords = [];
 try {
     $stmt = $pdo->prepare("SELECT mh.*, d.id as doctor_id, u.first_name as doctor_first_name, u.last_name as doctor_last_name FROM medical_history mh JOIN doctors d ON mh.doctor_id = d.id JOIN users u ON d.user_id = u.id WHERE mh.patient_id = ? ORDER BY mh.visit_date DESC");

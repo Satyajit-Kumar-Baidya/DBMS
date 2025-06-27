@@ -20,14 +20,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $appointment_time = $_POST['appointment_time'];
     $reason = $_POST['reason'];
     $status = 'Pending';
-    $stmt = $pdo->prepare("INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, status) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$patient_id, $doctor_id, $appointment_date, $appointment_time, $reason, $status]);
+    // Combine date and time into a single datetime string
+    $appointment_datetime = $appointment_date . ' ' . $appointment_time;
+    $stmt = $pdo->prepare("INSERT INTO appointments (patient_id, doctor_id, appointment_date, reason, status) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$patient_id, $doctor_id, $appointment_datetime, $reason, $status]);
     header("Location: manage_appointments.php");
     exit();
 }
 
 // Fetch all appointments with correct joins for names
-$stmt = $pdo->query("SELECT a.*, up.first_name AS patient_first_name, up.last_name AS patient_last_name, ud.first_name AS doctor_first_name, ud.last_name AS doctor_last_name FROM appointments a JOIN patients p ON a.patient_id = p.id JOIN users up ON p.user_id = up.id JOIN doctors d ON a.doctor_id = d.id JOIN users ud ON d.user_id = ud.id ORDER BY a.appointment_date DESC, a.appointment_time DESC");
+$stmt = $pdo->query("SELECT a.*, up.first_name AS patient_first_name, up.last_name AS patient_last_name, ud.first_name AS doctor_first_name, ud.last_name AS doctor_last_name FROM appointments a JOIN patients p ON a.patient_id = p.id JOIN users up ON p.user_id = up.id JOIN doctors d ON a.doctor_id = d.id JOIN users ud ON d.user_id = ud.id ORDER BY a.appointment_date DESC");
 $appointments = $stmt->fetchAll();
 
 // Fetch all patients and doctors for the form
@@ -72,8 +74,8 @@ $doctors = $pdo->query("SELECT d.id, u.first_name, u.last_name FROM doctors d JO
                                 <td><?php echo $apt['id']; ?></td>
                                 <td><?php echo $apt['patient_first_name'] . ' ' . $apt['patient_last_name']; ?></td>
                                 <td><?php echo $apt['doctor_first_name'] . ' ' . $apt['doctor_last_name']; ?></td>
-                                <td><?php echo $apt['appointment_date']; ?></td>
-                                <td><?php echo $apt['appointment_time']; ?></td>
+                                <td><?php echo date('Y-m-d', strtotime($apt['appointment_date'])); ?></td>
+                                <td><?php echo date('H:i', strtotime($apt['appointment_date'])); ?></td>
                                 <td><?php echo htmlspecialchars($apt['reason']); ?></td>
                                 <td><?php echo $apt['status']; ?></td>
                             </tr>
