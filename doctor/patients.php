@@ -65,9 +65,14 @@ try {
 }
 
 // Only show patients who have received a prescription from this doctor
-$filteredPatients = array_filter($patients, function($patient) use ($prescribedPatientIds) {
-    return isset($prescribedPatientIds[$patient['patient_id']]);
-});
+$filteredPatients = [];
+if (!empty($prescribedPatientIds)) {
+    $prescribedIds = array_keys($prescribedPatientIds);
+    $in = str_repeat('?,', count($prescribedIds) - 1) . '?';
+    $stmt = $pdo->prepare("SELECT p.id as patient_id, u.first_name, u.last_name, u.email, p.date_of_birth, p.gender FROM patients p JOIN users u ON p.user_id = u.id WHERE p.id IN ($in)");
+    $stmt->execute($prescribedIds);
+    $filteredPatients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // Handle delete prescription request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_patient_id'])) {

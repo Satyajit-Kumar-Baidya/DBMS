@@ -53,8 +53,8 @@ try {
             foreach ($lines as $i => $line) {
                 $data = str_getcsv($line);
                 if (count($data) < 7) continue;
-                list($doc_id, $pat_user_id, $date, $time, $reason, $apt_status, $created_at) = $data;
-                if ($doc_id == $doctorId && $pat_user_id == $userId && strtolower($apt_status) !== 'completed') {
+                list($doc_id, $pat_id, $date, $time, $reason, $apt_status, $created_at) = $data;
+                if ($doc_id == $doctorId && $pat_id == $patientId && strtolower($apt_status) !== 'completed') {
                     $data[5] = 'completed';
                     $lines[$i] = implode(',', $data) . "\n";
                     break;
@@ -101,28 +101,27 @@ try {
         fclose($handle);
     }
 
-    // Build a set of user_ids for patients who have had appointments with this doctor (from appointments.txt)
-    $appointmentPatientUserIds = [];
+    // Build a set of patient_ids for patients who have had appointments with this doctor (from appointments.txt)
+    $appointmentPatientIds = [];
     if (($handle = fopen('../appointments.txt', 'r')) !== false) {
         while (($data = fgetcsv($handle)) !== false) {
             if (count($data) < 7) continue;
-            list($doc_id, $user_id, $date, $time, $reason, $status, $created_at) = $data;
+            list($doc_id, $pat_id, $date, $time, $reason, $status, $created_at) = $data;
             if ($doc_id == $doctorId) {
-                $appointmentPatientUserIds[$user_id] = true;
+                $appointmentPatientIds[$pat_id] = true;
             }
         }
         fclose($handle);
     }
-    // Map user_ids to patient_ids
+    // Map patient_ids to names
     $patients = [];
-    if (!empty($appointmentPatientUserIds)) {
-        $userIds = array_keys($appointmentPatientUserIds);
-        $in = str_repeat('?,', count($userIds) - 1) . '?';
-        $stmt = $pdo->prepare("SELECT p.id as patient_id, u.first_name, u.last_name FROM patients p JOIN users u ON p.user_id = u.id WHERE p.user_id IN ($in)");
-        $stmt->execute($userIds);
+    if (!empty($appointmentPatientIds)) {
+        $patientIds = array_keys($appointmentPatientIds);
+        $in = str_repeat('?,', count($patientIds) - 1) . '?';
+        $stmt = $pdo->prepare("SELECT p.id as patient_id, u.first_name, u.last_name FROM patients p JOIN users u ON p.user_id = u.id WHERE p.id IN ($in)");
+        $stmt->execute($patientIds);
         $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-
     // Build a map of patient_id => user_id for patients who have had appointments with this doctor
     $patientIdToUserId = [];
     if (!empty($patients)) {

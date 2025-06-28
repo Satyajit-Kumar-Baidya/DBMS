@@ -67,6 +67,20 @@ try {
     // Ignore errors for now
 }
 
+// After fetching $appointments, build a map of patient_id => name
+$patientNames = [];
+if (!empty($appointments)) {
+    $patientIds = array_unique(array_column($appointments, 'patient_id'));
+    if (!empty($patientIds)) {
+        $in = str_repeat('?,', count($patientIds) - 1) . '?';
+        $stmt = $pdo->prepare("SELECT p.id, u.first_name, u.last_name FROM patients p JOIN users u ON p.user_id = u.id WHERE p.id IN ($in)");
+        $stmt->execute($patientIds);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $patientNames[$row['id']] = $row['first_name'] . ' ' . $row['last_name'];
+        }
+    }
+}
+
 // Separate appointments into upcoming and past (completed)
 $upcomingAppointments = [];
 $pastAppointments = [];
@@ -155,8 +169,10 @@ foreach ($appointments as $appointment) {
                                             <tr>
                                                 <td>
                                                     <?php 
-                                                    $userId = $appointment['patient_id'];
-                                                    echo isset($patientIdMap[$userId]) ? htmlspecialchars($patientIdMap[$userId]) : htmlspecialchars($userId); 
+                                                    echo htmlspecialchars($appointment['patient_id']);
+                                                    if (isset($patientNames[$appointment['patient_id']])) {
+                                                        echo ' (' . htmlspecialchars($patientNames[$appointment['patient_id']]) . ')';
+                                                    }
                                                     ?>
                                                 </td>
                                                 <td><?php echo date('M d, Y', strtotime($appointment['appointment_date'])) . ' ' . htmlspecialchars($appointment['appointment_time']); ?></td>
@@ -213,8 +229,10 @@ foreach ($appointments as $appointment) {
                                             <tr>
                                                 <td>
                                                     <?php 
-                                                    $userId = $appointment['patient_id'];
-                                                    echo isset($patientIdMap[$userId]) ? htmlspecialchars($patientIdMap[$userId]) : htmlspecialchars($userId); 
+                                                    echo htmlspecialchars($appointment['patient_id']);
+                                                    if (isset($patientNames[$appointment['patient_id']])) {
+                                                        echo ' (' . htmlspecialchars($patientNames[$appointment['patient_id']]) . ')';
+                                                    }
                                                     ?>
                                                 </td>
                                                 <td><?php echo date('M d, Y', strtotime($appointment['appointment_date'])) . ' ' . htmlspecialchars($appointment['appointment_time']); ?></td>

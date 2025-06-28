@@ -48,11 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = 'pending';
     $created_at = date('Y-m-d H:i:s');
     $doctor_id = $_GET['doctor_id'];
-    $patient_id = $_SESSION['user']['id'];
+    $patient_user_id = $_SESSION['user']['id'];
     // Get patientId from patients table
-        $stmt = $pdo->prepare("SELECT id FROM patients WHERE user_id = ? LIMIT 1");
-        $stmt->execute([$patient_id]);
-        $patientId = $stmt->fetchColumn();
+    $stmt = $pdo->prepare("SELECT id FROM patients WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$patient_user_id]);
+    $patientId = $stmt->fetchColumn();
     // Validate slot
     $validSlot = false;
     if ($slot_id) {
@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $line = implode(",", [
             $doctor_id,
-            $patient_id,
+            $patientId,
             $appointment_date,
             $appointment_time,
             $reason,

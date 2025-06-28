@@ -8,8 +8,12 @@ if (!isset($_SESSION['user']) || !isset($_SESSION['user']['role']) || $_SESSION[
     exit();
 }
 
+// Get the patient ID for the logged-in user
+$stmt = $pdo->prepare("SELECT id FROM patients WHERE user_id = ?");
+$stmt->execute([$_SESSION['user']['id']]);
+$patient_id = $stmt->fetchColumn();
+
 $appointments = [];
-$patient_id = $_SESSION['user']['id'];
 if (($handle = fopen('../appointments.txt', 'r')) !== false) {
     while (($data = fgetcsv($handle)) !== false) {
         if (count($data) < 7) continue;

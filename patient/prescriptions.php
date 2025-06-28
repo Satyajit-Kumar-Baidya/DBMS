@@ -33,11 +33,8 @@ try {
 // Use a separate file for patient-side prescription deletions
 $patientPrescriptionsFile = '../prescriptions_patient.txt';
 $allPrescriptions = [];
-if (file_exists($patientPrescriptionsFile)) {
-    // If the patient-specific file exists, use it
-    $lines = file($patientPrescriptionsFile);
-    foreach ($lines as $line) {
-        $data = str_getcsv($line);
+if (($handle = fopen('../prescriptions.txt', 'r')) !== false) {
+    while (($data = fgetcsv($handle)) !== false) {
         if (count($data) < 7) continue;
         list($pid, $doctor_id, $medication, $dosage, $instructions, $status, $prescription_date) = $data;
         if ($pid == $patientId) {
@@ -52,26 +49,7 @@ if (file_exists($patientPrescriptionsFile)) {
             ];
         }
     }
-} else {
-    // Otherwise, use the main file
-    if (($handle = fopen('../prescriptions.txt', 'r')) !== false) {
-        while (($data = fgetcsv($handle)) !== false) {
-            if (count($data) < 7) continue;
-            list($pid, $doctor_id, $medication, $dosage, $instructions, $status, $prescription_date) = $data;
-            if ($pid == $patientId) {
-                $allPrescriptions[] = [
-                    'patient_id' => $pid,
-                    'doctor_id' => $doctor_id,
-                    'medication' => $medication,
-                    'dosage' => $dosage,
-                    'instructions' => $instructions,
-                    'status' => $status,
-                    'prescription_date' => $prescription_date
-                ];
-            }
-        }
-        fclose($handle);
-    }
+    fclose($handle);
 }
 
 // Handle delete prescription request (patient side only)
