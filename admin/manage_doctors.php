@@ -17,22 +17,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
             case 'add':
-                $stmt = $pdo->prepare("INSERT INTO doctors (first_name, last_name, specialization, email, phone) VALUES (?, ?, ?, ?, ?)");
+                // Check if email already exists
+                $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+                $stmt->execute([$_POST['email']]);
+                if ($stmt->fetch()) {
+                    echo '<script>alert("Email already exists. Please use a different email."); window.location.href="manage_doctors.php";</script>';
+                    exit();
+                }
+                // Create user with doctor role
+                $stmt = $pdo->prepare("INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, 'doctor')");
                 $stmt->execute([
                     $_POST['first_name'],
                     $_POST['last_name'],
-                    $_POST['specialization'],
                     $_POST['email'],
+                    password_hash($_POST['password'], PASSWORD_DEFAULT)
+                ]);
+                $user_id = $pdo->lastInsertId();
+                // Create doctor
+                $stmt = $pdo->prepare("INSERT INTO doctors (user_id, specialization, phone) VALUES (?, ?, ?)");
+                $stmt->execute([
+                    $user_id,
+                    $_POST['specialization'],
                     $_POST['phone']
                 ]);
                 break;
             case 'edit':
-                $stmt = $pdo->prepare("UPDATE doctors SET first_name = ?, last_name = ?, specialization = ?, email = ?, phone = ? WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE doctors SET specialization = ?, phone = ? WHERE id = ?");
                 $stmt->execute([
-                    $_POST['first_name'],
-                    $_POST['last_name'],
                     $_POST['specialization'],
-                    $_POST['email'],
                     $_POST['phone'],
                     $_POST['id']
                 ]);
@@ -129,6 +141,10 @@ $doctors = $stmt->fetchAll();
                             <div class="mb-3">
                                 <label class="form-label">Email</label>
                                 <input type="email" class="form-control" name="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-control" name="password" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Phone</label>

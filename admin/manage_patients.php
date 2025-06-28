@@ -17,29 +17,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
             case 'add':
-                $stmt = $pdo->prepare("INSERT INTO patients (first_name, last_name, date_of_birth, gender, email, phone, address, blood_group) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                // Check if email already exists
+                $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+                $stmt->execute([$_POST['email']]);
+                if ($stmt->fetch()) {
+                    echo '<script>alert("Email already exists. Please use a different email."); window.location.href="manage_patients.php";</script>';
+                    exit();
+                }
+                // Create user
+                $stmt = $pdo->prepare("INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, 'patient')");
                 $stmt->execute([
                     $_POST['first_name'],
                     $_POST['last_name'],
+                    $_POST['email'],
+                    password_hash($_POST['password'], PASSWORD_DEFAULT)
+                ]);
+                $user_id = $pdo->lastInsertId();
+                // Create patient
+                $stmt = $pdo->prepare("INSERT INTO patients (user_id, date_of_birth, gender, blood_group, address, phone) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([
+                    $user_id,
                     $_POST['date_of_birth'],
                     $_POST['gender'],
-                    $_POST['email'],
-                    $_POST['phone'],
+                    $_POST['blood_group'],
                     $_POST['address'],
-                    $_POST['blood_group']
+                    $_POST['phone']
                 ]);
                 break;
             case 'edit':
-                $stmt = $pdo->prepare("UPDATE patients SET first_name = ?, last_name = ?, date_of_birth = ?, gender = ?, email = ?, phone = ?, address = ?, blood_group = ? WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE patients SET date_of_birth = ?, gender = ?, blood_group = ?, address = ?, phone = ? WHERE id = ?");
                 $stmt->execute([
-                    $_POST['first_name'],
-                    $_POST['last_name'],
                     $_POST['date_of_birth'],
                     $_POST['gender'],
-                    $_POST['email'],
-                    $_POST['phone'],
-                    $_POST['address'],
                     $_POST['blood_group'],
+                    $_POST['address'],
+                    $_POST['phone'],
                     $_POST['id']
                 ]);
                 break;
@@ -147,6 +159,10 @@ $patients = $stmt->fetchAll();
                             <div class="mb-3">
                                 <label class="form-label">Email</label>
                                 <input type="email" class="form-control" name="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-control" name="password" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Phone</label>
